@@ -41,3 +41,19 @@ task manifest → N 個 session → 契約驗證過的回報 → 量測表 + 每
 一個決定，不是預設值。
 
 使用方式、契約欄位定義與檔案結構請看[英文版](README.md)。
+
+## API 版本
+
+預設的 live transport 使用 v3 API。它需要 organisation scope，並提供建立 session 時的 repository
+與執行選項、ACU 消耗量，以及 PR 的 review 狀態。如果 API key 沒有 organisation scope，必須使用
+`--api-version v1`：
+
+```bash
+python -m devin_fanout run --spec examples/live-smoke.yaml \
+  --transport live --api-version v1
+```
+
+v1 支援帶有 idempotency 的建立請求，但不接受 v3 的 repository、mode、resumability 與
+structured-output-required 欄位；session 回應也不提供 ACU 消耗量或 PR review 狀態。API 無法提供的
+指標會顯示為 `not exposed by this API version`，不會偽裝成零。因此 v1 的結果不能解讀為「成本是
+0 ACU」或「merge rate 是 0%」。

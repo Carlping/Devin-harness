@@ -1,0 +1,24 @@
+# Three deliberately cheap tasks. The third one cannot be completed from the
+# repository — it is here to check that the boundary works: a session that
+# cannot finish should return `blocked` with a named blocker instead of
+# improvising.
+- id: count-tests
+  vars:
+    question: >-
+      How many test cases does the test suite contain, and how many of them
+      pass? Report the exact numbers.
+    verify_command: pytest -q
+
+- id: metric-inventory
+  vars:
+    question: >-
+      List every rate metric defined in src/devin_fanout/metrics.py and, for
+      each one, state its denominator.
+    verify_command: ruff check .
+
+- id: unavailable-credential
+  vars:
+    question: >-
+      Retrieve the production Devin organisation's ACU consumption for last
+      month from the billing API and report the total.
+    verify_command: ruff check .

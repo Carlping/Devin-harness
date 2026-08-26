@@ -20,7 +20,20 @@ def _pct(value: float) -> str:
     return f"{value * 100:.1f}%"
 
 
+def _acu(value: float, available: bool) -> str:
+    """An unavailable measurement is printed as such, never as 0."""
+    return f"{value}" if available else "not exposed by this API version"
+
+
 def render_markdown(metrics: RunMetrics) -> str:
+    pr_merge_rate = (
+        _pct(metrics.pr_merge_rate) if metrics.acus_available else "not exposed by this API version"
+    )
+    pr_counts = (
+        f"{metrics.prs_opened} / {metrics.prs_merged}"
+        if metrics.acus_available
+        else f"{metrics.prs_opened} / not exposed by this API version"
+    )
     lines: list[str] = [
         f"# Fan-out run `{metrics.run_id}`",
         "",
@@ -45,7 +58,7 @@ def render_markdown(metrics: RunMetrics) -> str:
         f"| Human attention rate | {_pct(metrics.human_attention_rate)} | "
         "Tasks needing a person: blocked, partial, timed out, invalid report, API failure, "
         "or an explicit `human_action_required`. |",
-        f"| PR merge rate | {_pct(metrics.pr_merge_rate)} | "
+        f"| PR merge rate | {pr_merge_rate} | "
         "PRs in state `merged` at report time — external evidence, not self-report. "
         "Re-run `report` later to let this catch up with review. |",
         f"| Report-schema validity | {_pct(metrics.schema_valid_rate)} | "
@@ -55,8 +68,9 @@ def render_markdown(metrics: RunMetrics) -> str:
         "",
         "| Metric | Value |",
         "| --- | --- |",
-        f"| ACUs total | {metrics.acus_total} |",
-        f"| ACUs mean / p90 per task | {metrics.acus_mean} / {metrics.acus_p90} |",
+        f"| ACUs total | {_acu(metrics.acus_total, metrics.acus_available)} |",
+        f"| ACUs mean / p90 per task | {_acu(metrics.acus_mean, metrics.acus_available)}"
+        f" / {_acu(metrics.acus_p90, metrics.acus_available)} |",
         f"| Wall-clock mean / p90 per task (s) | {metrics.wall_seconds_mean} / "
         f"{metrics.wall_seconds_p90} |",
         f"| Mean polls per session | {metrics.polls_mean} |",
@@ -73,7 +87,7 @@ def render_markdown(metrics: RunMetrics) -> str:
         f"| Self-reported completed / partial / blocked / not attempted | "
         f"{metrics.self_reported_completed} / {metrics.self_reported_partial} / "
         f"{metrics.self_reported_blocked} / {metrics.self_reported_not_attempted} |",
-        f"| PRs opened / merged | {metrics.prs_opened} / {metrics.prs_merged} |",
+        f"| PRs opened / merged | {pr_counts} |",
         "",
         "## Per task",
         "",
@@ -103,6 +117,11 @@ def render_markdown(metrics: RunMetrics) -> str:
         "- `pr_merge_rate` is a snapshot. It is bounded by how fast a human reviews, not by "
         "the agent.",
         "- Tasks that fail to start count against every rate, on purpose.",
-        "",
     ]
+    if not metrics.acus_available:
+        lines.append(
+            "- The v1 API does not expose ACU consumption or pull-request review state, so those "
+            "metrics are reported as unavailable rather than zero."
+        )
+    lines.append("")
     return "\n".join(lines)
