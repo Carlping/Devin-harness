@@ -40,7 +40,7 @@ python -m devin_fanout run --spec examples/live-smoke.yaml \
   --transport live --api-version v1
 ```
 
-回來的是每個 run 一張表——這是本 repository 提交的真實三-task run，以下為節錄：
+回來的是每個 run 一張表——以下節錄自本 repository 裡那次真實的三個 task 的 run：
 
 | Metric | Value |
 | --- | --- |
