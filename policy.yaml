@@ -1,0 +1,65 @@
+# Missing verification evidence costs review time and makes completion claims uncheckable.
+verification_vars:
+  - verify_command
+
+# These verb-led patterns cost a human the decision an agent cannot repair; mentioning a topic is not changing it.
+# The list was narrowed after noun patterns refused both of this repository's own examples.
+human_decision_classes:
+  secrets-and-credentials:
+    - rotate the credential
+    - rotate credentials
+    - add a secret
+    - store a secret
+    - change the api key
+    - commit the .env
+    - generate a private key
+    - revoke the token
+  authentication-and-authorization:
+    - change authentication
+    - change authorisation
+    - change authorization
+    - modify permissions
+    - grant access
+    - update the iam policy
+    - disable auth
+    - bypass auth
+  billing-and-payments:
+    - change pricing
+    - issue a refund
+    - charge the customer
+    - modify the invoice
+    - update billing details
+  schema-migration:
+    - run a migration
+    - write a migration
+    - alter table
+    - drop column
+    - change the schema
+  production-data-deletion:
+    - delete production
+    - drop table
+    - truncate the
+    - purge the
+    - restore backup
+  external-communication:
+    - press release
+    - announce to
+    - publish a post
+    - email customers
+
+# Exceeding this concurrency ceiling spends more simultaneous agent capacity than reviewed.
+max_concurrency: 5
+
+# Exceeding this ACU ceiling spends more agent budget per session than reviewed.
+max_acu_limit: 10
+
+# Exceeding this timeout ceiling spends more waiting time before a human can intervene.
+max_timeout_minutes: 60
+
+# Allowing these phrases costs independent acceptance evidence because the agent grades itself.
+banned_prompt_phrases:
+  - make sure everything works
+  - confirm it looks good
+  - verify that all is well
+  - if it looks correct
+  - ensure nothing is broken

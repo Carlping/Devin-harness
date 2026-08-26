@@ -67,6 +67,26 @@ unanswerable from the repository; it returned named blockers instead of a plausi
 number, which is the behaviour the whole harness exists to detect. Full report:
 [`examples/run-output/live-smoke/REPORT.md`](examples/run-output/live-smoke/REPORT.md).
 
+## The policy the harness enforces on itself
+
+Before it constructs a transport, the harness evaluates `policy.yaml` and refuses:
+
+| Rule | Refuses |
+| --- | --- |
+| `verification-required` | Tasks without a non-empty verification variable. |
+| `human-decision-classes` | Tasks involving credentials, authorization, billing, schema migration, production deletion, or external communication. |
+| `repo-allowlist` | Wildcard repos, missing repos, or repos outside the spec allowlist. |
+| `write-requires-pr` | Undeclared mutation intent, or repository writes without a required PR. |
+| `blast-radius-ceiling` | Runs without an ACU limit or above the policy's concurrency, ACU, or timeout ceilings. |
+| `no-self-grading` | Prompts that ask the agent to grade its own acceptance criteria. |
+
+The patterns are action phrases because the first noun-based draft refused this repository's own
+examples.
+
+There is no bypass flag. The only way past a rule is editing `policy.yaml`, which makes
+the exception a reviewable diff. A policy violation prints each refused task and exits
+with code `3`; a missing or invalid policy is an error, not an unpoliced run.
+
 ## The three decisions that make the table trustworthy
 
 **1. Self-report and external evidence are never merged.** A session's structured output

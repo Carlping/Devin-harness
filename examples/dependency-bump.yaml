@@ -11,6 +11,7 @@ timeout_minutes: 45
 devin_mode: fast
 max_acu_limit: 10
 require_pr: true
+mutates_repo: true
 tags:
   - migration
   - httpx

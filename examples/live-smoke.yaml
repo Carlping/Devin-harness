@@ -13,5 +13,6 @@ timeout_minutes: 30
 devin_mode: fast
 max_acu_limit: 5
 require_pr: false
+mutates_repo: false
 tags:
   - live-smoke

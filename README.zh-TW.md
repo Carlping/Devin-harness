@@ -60,6 +60,25 @@ API version 無法告訴你 cost。第三個 task 刻意設計成無法從 repos
 blockers，而不是一個看似合理的數字，這正是整個 harness 要找出的行為。完整報表：
 [`examples/run-output/live-smoke/REPORT.md`](examples/run-output/live-smoke/REPORT.md)。
 
+## harness 自己也遵守的 policy
+
+建立 transport 之前，harness 會先評估 `policy.yaml`，拒絕以下情況：
+
+| Rule | 拒絕的情況 |
+| --- | --- |
+| `verification-required` | 沒有非空 verification variable 的 task。 |
+| `human-decision-classes` | 涉及 credentials、authorization、billing、schema migration、production deletion 或 external communication 的 task。 |
+| `repo-allowlist` | wildcard repo、沒有 repo，或不在 spec allowlist 中的 repo。 |
+| `write-requires-pr` | 沒宣告是否會修改 repository，或寫入 repository 卻沒有要求 PR。 |
+| `blast-radius-ceiling` | 沒有 ACU limit，或超過 policy 的 concurrency、ACU、timeout 上限。 |
+| `no-self-grading` | 要求 agent 自己替 acceptance criteria 打分的 prompt。 |
+
+這些 patterns 使用動作片語，是因為第一版使用名詞時拒絕了這個 repository 自己的 examples。
+
+沒有 bypass flag。唯一能通過規則的方式是編輯 `policy.yaml`，因此例外會留下可審查的 diff。
+policy violation 會列出每個被拒絕的 task，並以 exit code `3` 結束；policy 缺失或無效時會報錯，
+不會未受管控地執行。
+
 ## 讓這張表可信的三個決定
 
 1. **自述與外部證據永不合併。** session 的 structured output 只是「主張」；PR 是否存在、是否

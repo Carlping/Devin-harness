@@ -12,6 +12,7 @@ from devin_fanout.__main__ import main
 from devin_fanout.client import CreatedSession, MockTransport, SessionState, V1Transport
 from devin_fanout.contract import DEFAULT_STRUCTURED_OUTPUT_SCHEMA
 from devin_fanout.metrics import percentile, summarize
+from devin_fanout.policy import DecisionClass, Policy, PolicyError, evaluate, load_policy
 from devin_fanout.report import MOCK_BANNER, render_markdown
 from devin_fanout.runner import TaskResult, build_payload, run, validate_output
 from devin_fanout.spec import SpecError, load_spec, render_prompt
@@ -402,7 +403,191 @@ def test_report_mock_banner_is_transport_specific() -> None:
 
 
 def test_validate_cli_returns_success_and_spec_error(tmp_path: Path) -> None:
-    valid = write_spec(tmp_path)
-    assert main(["validate", "--spec", str(valid)]) == 0
+    valid = write_spec(
+        tmp_path,
+        spec_updates={
+            "repos": ["github.com/example/repo"],
+            "max_acu_limit": 1,
+            "timeout_minutes": 60,
+            "mutates_repo": False,
+        },
+    )
+    policy = tmp_path / "policy.yaml"
+    policy.write_text("human_decision_classes: {}\n", encoding="utf-8")
+    assert main(["validate", "--spec", str(valid), "--policy", str(policy)]) == 0
     invalid = write_spec(tmp_path / "bad", spec_updates={"unexpected": True})
-    assert main(["validate", "--spec", str(invalid)]) == 2
+    assert main(["validate", "--spec", str(invalid), "--policy", str(policy)]) == 2
+
+
+def permissive_policy(**updates: Any) -> Policy:
+    values: dict[str, Any] = {
+        "verification_vars": ("verify_command",),
+        "human_decision_classes": (),
+        "max_concurrency": 5,
+        "max_acu_limit": 10,
+        "max_timeout_minutes": 60,
+        "banned_prompt_phrases": (),
+    }
+    values.update(updates)
+    return Policy(**values)
+
+
+def policy_spec(tmp_path: Path, **updates: Any):
+    return load_spec(
+        write_spec(
+            tmp_path,
+            spec_updates={
+                "repos": ["github.com/example/repo"],
+                "max_acu_limit": 1,
+                "mutates_repo": False,
+                **updates,
+            },
+        )
+    )
+
+
+def test_policy_verification_required_names_task(tmp_path: Path) -> None:
+    spec = load_spec(
+        write_spec(
+            tmp_path,
+            tasks=[
+                {
+                    "id": "missing-verification",
+                    "vars": {
+                        "path": "src",
+                        "old_api": "old",
+                        "new_api": "new",
+                        "verify_command": "",
+                    },
+                }
+            ],
+        )
+    )
+    violations = evaluate(spec, permissive_policy())
+    assert any(
+        v.rule == "verification-required" and v.task_id == "missing-verification"
+        for v in violations
+    )
+
+
+def test_policy_human_decision_classes_match_prompt_and_notes(tmp_path: Path) -> None:
+    spec = policy_spec(tmp_path)
+    task = replace(spec.tasks[0], prompt="Review an API key rotation", notes="")
+    spec = replace(spec, tasks=(task,))
+    policy = permissive_policy(
+        human_decision_classes=(DecisionClass("secrets-and-credentials", ("api key",)),)
+    )
+    violations = evaluate(spec, policy)
+    assert any(v.rule == "human-decision-classes" and v.task_id == task.id for v in violations)
+
+
+def test_policy_repo_allowlist_refuses_wildcards_and_outside_repos(tmp_path: Path) -> None:
+    spec = policy_spec(tmp_path)
+    task = replace(spec.tasks[0], repos=("github.com/example/*", "github.com/other/repo"))
+    violations = evaluate(replace(spec, tasks=(task,)), permissive_policy())
+    repo_violations = [v for v in violations if v.rule == "repo-allowlist"]
+    assert len(repo_violations) == 3
+
+
+def test_policy_write_requires_pr(tmp_path: Path) -> None:
+    spec = policy_spec(tmp_path, mutates_repo=True, require_pr=False)
+    violations = evaluate(spec, permissive_policy())
+    assert any(v.rule == "write-requires-pr" for v in violations)
+
+
+def test_policy_blast_radius_ceiling(tmp_path: Path) -> None:
+    spec = policy_spec(
+        tmp_path,
+        concurrency=6,
+        max_acu_limit=11,
+        timeout_minutes=61,
+    )
+    violations = evaluate(spec, permissive_policy())
+    assert sum(v.rule == "blast-radius-ceiling" for v in violations) == 3
+
+
+def test_policy_no_self_grading(tmp_path: Path) -> None:
+    spec = policy_spec(tmp_path)
+    task = replace(spec.tasks[0], prompt="Make sure everything works before reporting.")
+    policy = permissive_policy(banned_prompt_phrases=("make sure everything works",))
+    violations = evaluate(replace(spec, tasks=(task,)), policy)
+    assert any(v.rule == "no-self-grading" and v.task_id == task.id for v in violations)
+
+
+def test_policy_passes_both_repository_examples() -> None:
+    policy = load_policy(ROOT / "policy.yaml")
+    assert evaluate(load_spec(DEMO_SPEC), policy) == ()
+    assert evaluate(load_spec(ROOT / "examples" / "live-smoke.yaml"), policy) == ()
+
+
+def test_policy_does_not_fire_on_tasks_that_merely_discuss_a_class() -> None:
+    policy = load_policy(ROOT / "policy.yaml")
+    spec = load_spec(ROOT / "examples" / "live-smoke.yaml")
+    discussed_task = next(task for task in spec.tasks if task.id == "unavailable-credential")
+    prompt = discussed_task.prompt.casefold()
+    assert "if completing this task would require a credential" in prompt
+    assert "from the billing api" in prompt
+    assert evaluate(spec, policy) == ()
+
+
+def test_policy_evaluate_returns_all_violations(tmp_path: Path) -> None:
+    spec = policy_spec(tmp_path, max_acu_limit=None, mutates_repo=None)
+    task = replace(spec.tasks[0], prompt="make sure everything works", repos=())
+    policy = permissive_policy(
+        human_decision_classes=(DecisionClass("secrets", ("make sure",)),),
+        banned_prompt_phrases=("make sure everything works",),
+    )
+    violations = evaluate(replace(spec, tasks=(task,)), policy)
+    assert {violation.rule for violation in violations} >= {
+        "human-decision-classes",
+        "repo-allowlist",
+        "write-requires-pr",
+        "blast-radius-ceiling",
+        "no-self-grading",
+    }
+
+
+def test_policy_violation_prevents_transport_construction(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    spec = write_spec(
+        tmp_path,
+        spec_updates={
+            "repos": ["github.com/example/repo"],
+            "max_acu_limit": 1,
+            "mutates_repo": False,
+        },
+        template=(
+            "Make sure everything works while changing {{ path }} from {{ old_api }} "
+            "to {{ new_api }}; run {{ verify_command }}"
+        ),
+    )
+    policy_path = tmp_path / "policy.yaml"
+    policy_path.write_text(
+        yaml.safe_dump(
+            {
+                "human_decision_classes": {},
+                "banned_prompt_phrases": ["make sure everything works"],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    class UnexpectedTransport:
+        def __init__(self, **_: Any) -> None:
+            raise AssertionError("transport must not be constructed")
+
+    monkeypatch.setattr("devin_fanout.__main__.MockTransport", UnexpectedTransport)
+    assert main(["run", "--spec", str(spec), "--policy", str(policy_path)]) == 3
+
+
+def test_missing_policy_file_is_an_error(tmp_path: Path) -> None:
+    spec = write_spec(tmp_path)
+    assert main(["validate", "--spec", str(spec), "--policy", str(tmp_path / "missing.yaml")]) == 2
+
+
+def test_unknown_policy_key_is_an_error(tmp_path: Path) -> None:
+    path = tmp_path / "policy.yaml"
+    path.write_text("human_decision_classes: {}\nunexpected: true\n", encoding="utf-8")
+    with pytest.raises(PolicyError, match="unknown keys"):
+        load_policy(path)
