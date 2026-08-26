@@ -26,14 +26,6 @@ POLICY_KEYS = {
     "max_timeout_minutes",
     "banned_prompt_phrases",
 }
-POLICY_CLASS_NAMES = (
-    "secrets-and-credentials",
-    "authentication-and-authorization",
-    "billing-and-payments",
-    "schema-migration",
-    "production-data-deletion",
-    "external-communication",
-)
 RULE_NAMES = (
     "verification-required",
     "human-decision-classes",

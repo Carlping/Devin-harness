@@ -13,7 +13,6 @@ import json
 import os
 import sys
 from datetime import datetime, timezone
-from typing import Any
 
 try:
     from datetime import UTC
@@ -29,7 +28,7 @@ from .metrics import summarize
 from .policy import Policy, PolicyError, evaluate, load_policy
 from .report import render_markdown
 from .runner import TaskResult, build_payload, run
-from .spec import SpecError, load_spec
+from .spec import RunSpec, SpecError, load_spec
 
 
 def _now() -> str:
@@ -43,7 +42,11 @@ def _load_scenarios(path: Path) -> dict:
     return data
 
 
-def _enforce_policy(spec: Any, path: Path) -> Policy:
+class PolicyViolation(Exception):
+    """Internal signal for the CLI's distinct policy exit code."""
+
+
+def _enforce_policy(spec: RunSpec, path: Path) -> Policy:
     policy = load_policy(path)
     violations = evaluate(spec, policy)
     for violation in violations:
@@ -54,10 +57,6 @@ def _enforce_policy(spec: Any, path: Path) -> Policy:
     if violations:
         raise PolicyViolation
     return policy
-
-
-class PolicyViolation(Exception):
-    """Internal signal for the CLI's distinct policy exit code."""
 
 
 def _write_outputs(
