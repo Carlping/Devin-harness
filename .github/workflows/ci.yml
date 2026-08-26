@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: pytest -q
+
+  reproduce:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e .
+      - run: python -m devin_fanout run --spec examples/dependency-bump.yaml --transport mock --scenarios examples/scenarios/dependency-bump.yaml --out /tmp/fanout-ci
+      - run: test -f /tmp/fanout-ci/dependency-bump-demo/REPORT.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fanout-mock-run
+          path: /tmp/fanout-ci/dependency-bump-demo

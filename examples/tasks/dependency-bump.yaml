@@ -1,0 +1,48 @@
+- id: auth-service
+  vars:
+    path: services/auth
+    old_api: requests.get
+    new_api: httpx.get
+    verify_command: pytest services/auth -q
+    pr_title: "auth: migrate requests.get to httpx.get"
+
+- id: billing-worker
+  vars:
+    path: workers/billing
+    old_api: requests.get
+    new_api: httpx.get
+    verify_command: pytest workers/billing -q
+    pr_title: "billing: migrate requests.get to httpx.get"
+
+- id: legacy-reports
+  vars:
+    path: legacy/reports
+    old_api: requests.get
+    new_api: httpx.get
+    verify_command: pytest legacy/reports -q
+    pr_title: "reports: migrate requests.get to httpx.get"
+  notes: No test coverage upstream; expected to come back blocked.
+
+- id: notifications
+  vars:
+    path: services/notifications
+    old_api: requests.get
+    new_api: httpx.get
+    verify_command: pytest services/notifications -q
+    pr_title: "notifications: migrate requests.get to httpx.get"
+
+- id: data-export
+  vars:
+    path: jobs/export
+    old_api: requests.get
+    new_api: httpx.get
+    verify_command: pytest jobs/export -q
+    pr_title: "export: migrate requests.get to httpx.get"
+
+- id: admin-ui
+  vars:
+    path: apps/admin
+    old_api: requests.get
+    new_api: httpx.get
+    verify_command: pytest apps/admin -q
+    pr_title: "admin: migrate requests.get to httpx.get"

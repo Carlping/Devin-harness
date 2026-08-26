@@ -1,0 +1,97 @@
+# Scripted terminal states for the mock transport. These are fixtures chosen to
+# exercise every bucket the metrics distinguish — including the two that matter
+# most: a session that claims success without evidence, and a session whose
+# report does not satisfy the contract at all.
+polls_before_terminal: 2
+
+scenarios:
+  auth-service:
+    status: exit
+    status_detail: finished
+    acus_consumed: 6.2
+    pull_requests:
+      - pr_url: https://github.com/example-org/example-monorepo/pull/101
+        pr_state: merged
+    structured_output:
+      outcome: completed
+      summary: Replaced four requests.get call sites with httpx.get and updated the client fixture.
+      verification:
+        command: pytest services/auth -q
+        passed: true
+      pr_url: https://github.com/example-org/example-monorepo/pull/101
+      human_action_required: ""
+      files_changed: 3
+
+  billing-worker:
+    status: exit
+    status_detail: finished
+    acus_consumed: 9.4
+    pull_requests:
+      - pr_url: https://github.com/example-org/example-monorepo/pull/102
+        pr_state: open
+    structured_output:
+      outcome: completed
+      summary: Migrated the billing HTTP client; retry semantics differ, so review the backoff change.
+      verification:
+        command: pytest workers/billing -q
+        passed: true
+      pr_url: https://github.com/example-org/example-monorepo/pull/102
+      human_action_required: Confirm the retry/backoff behaviour change is acceptable.
+      files_changed: 2
+
+  legacy-reports:
+    status: exit
+    status_detail: finished
+    acus_consumed: 3.1
+    pull_requests: []
+    structured_output:
+      outcome: blocked
+      summary: The module has no tests, so the migration cannot be verified in place.
+      verification:
+        command: ""
+        passed: false
+      pr_url: null
+      human_action_required: Decide whether to migrate without test coverage.
+      blockers:
+        - No test target exists for legacy/reports
+      files_changed: 0
+
+  notifications:
+    status: exit
+    status_detail: finished
+    acus_consumed: 11.8
+    pull_requests:
+      - pr_url: https://github.com/example-org/example-monorepo/pull/103
+        pr_state: open
+    structured_output:
+      outcome: completed
+      summary: Migrated all call sites.
+      verification:
+        command: pytest services/notifications -q
+        passed: false
+        detail: 2 failed, 31 passed
+      pr_url: https://github.com/example-org/example-monorepo/pull/103
+      human_action_required: ""
+      files_changed: 5
+
+  data-export:
+    status: exit
+    status_detail: finished
+    acus_consumed: 4.5
+    pull_requests: []
+    structured_output:
+      outcome: completed
+      summary: Migration applied locally; I did not open a pull request.
+      verification:
+        command: pytest jobs/export -q
+        passed: true
+      pr_url: null
+      human_action_required: ""
+      files_changed: 1
+
+  admin-ui:
+    status: error
+    status_detail: agent stopped without a final report
+    acus_consumed: 2.0
+    pull_requests: []
+    structured_output: null

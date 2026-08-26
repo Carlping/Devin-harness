@@ -1,0 +1,16 @@
+# Run specification. `python -m devin_fanout validate --spec examples/dependency-bump.yaml`
+# refuses anything ambiguous before a single session is created.
+run_id: dependency-bump-demo
+prompt_template: prompts/dependency-bump.md
+tasks: tasks/dependency-bump.yaml
+repos:
+  - github.com/example-org/example-monorepo
+concurrency: 3
+poll_interval_seconds: 30
+timeout_minutes: 45
+devin_mode: fast
+max_acu_limit: 10
+require_pr: true
+tags:
+  - migration
+  - httpx

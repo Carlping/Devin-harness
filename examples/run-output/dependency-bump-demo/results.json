@@ -1,0 +1,169 @@
+[
+  {
+    "acus_consumed": 6.2,
+    "error": null,
+    "polls": 2,
+    "pull_requests": [
+      {
+        "pr_state": "merged",
+        "pr_url": "https://github.com/example-org/example-monorepo/pull/101"
+      }
+    ],
+    "schema_errors": [],
+    "schema_valid": true,
+    "session_id": "devin-mock-auth-service",
+    "session_url": "https://app.devin.ai/sessions/auth-service",
+    "status": "exit",
+    "status_detail": "finished",
+    "structured_output": {
+      "files_changed": 3,
+      "human_action_required": "",
+      "outcome": "completed",
+      "pr_url": "https://github.com/example-org/example-monorepo/pull/101",
+      "summary": "Replaced four requests.get call sites with httpx.get and updated the client fixture.",
+      "verification": {
+        "command": "pytest services/auth -q",
+        "passed": true
+      }
+    },
+    "task_id": "auth-service",
+    "timed_out": false,
+    "wall_seconds": 30.102
+  },
+  {
+    "acus_consumed": 9.4,
+    "error": null,
+    "polls": 2,
+    "pull_requests": [
+      {
+        "pr_state": "open",
+        "pr_url": "https://github.com/example-org/example-monorepo/pull/102"
+      }
+    ],
+    "schema_errors": [],
+    "schema_valid": true,
+    "session_id": "devin-mock-billing-worker",
+    "session_url": "https://app.devin.ai/sessions/billing-worker",
+    "status": "exit",
+    "status_detail": "finished",
+    "structured_output": {
+      "files_changed": 2,
+      "human_action_required": "Confirm the retry/backoff behaviour change is acceptable.",
+      "outcome": "completed",
+      "pr_url": "https://github.com/example-org/example-monorepo/pull/102",
+      "summary": "Migrated the billing HTTP client; retry semantics differ, so review the backoff change.",
+      "verification": {
+        "command": "pytest workers/billing -q",
+        "passed": true
+      }
+    },
+    "task_id": "billing-worker",
+    "timed_out": false,
+    "wall_seconds": 30.102
+  },
+  {
+    "acus_consumed": 3.1,
+    "error": null,
+    "polls": 2,
+    "pull_requests": [],
+    "schema_errors": [],
+    "schema_valid": true,
+    "session_id": "devin-mock-legacy-reports",
+    "session_url": "https://app.devin.ai/sessions/legacy-reports",
+    "status": "exit",
+    "status_detail": "finished",
+    "structured_output": {
+      "blockers": [
+        "No test target exists for legacy/reports"
+      ],
+      "files_changed": 0,
+      "human_action_required": "Decide whether to migrate without test coverage.",
+      "outcome": "blocked",
+      "pr_url": null,
+      "summary": "The module has no tests, so the migration cannot be verified in place.",
+      "verification": {
+        "command": "",
+        "passed": false
+      }
+    },
+    "task_id": "legacy-reports",
+    "timed_out": false,
+    "wall_seconds": 30.103
+  },
+  {
+    "acus_consumed": 11.8,
+    "error": null,
+    "polls": 2,
+    "pull_requests": [
+      {
+        "pr_state": "open",
+        "pr_url": "https://github.com/example-org/example-monorepo/pull/103"
+      }
+    ],
+    "schema_errors": [],
+    "schema_valid": true,
+    "session_id": "devin-mock-notifications",
+    "session_url": "https://app.devin.ai/sessions/notifications",
+    "status": "exit",
+    "status_detail": "finished",
+    "structured_output": {
+      "files_changed": 5,
+      "human_action_required": "",
+      "outcome": "completed",
+      "pr_url": "https://github.com/example-org/example-monorepo/pull/103",
+      "summary": "Migrated all call sites.",
+      "verification": {
+        "command": "pytest services/notifications -q",
+        "detail": "2 failed, 31 passed",
+        "passed": false
+      }
+    },
+    "task_id": "notifications",
+    "timed_out": false,
+    "wall_seconds": 30.068
+  },
+  {
+    "acus_consumed": 4.5,
+    "error": null,
+    "polls": 2,
+    "pull_requests": [],
+    "schema_errors": [],
+    "schema_valid": true,
+    "session_id": "devin-mock-data-export",
+    "session_url": "https://app.devin.ai/sessions/data-export",
+    "status": "exit",
+    "status_detail": "finished",
+    "structured_output": {
+      "files_changed": 1,
+      "human_action_required": "",
+      "outcome": "completed",
+      "pr_url": null,
+      "summary": "Migration applied locally; I did not open a pull request.",
+      "verification": {
+        "command": "pytest jobs/export -q",
+        "passed": true
+      }
+    },
+    "task_id": "data-export",
+    "timed_out": false,
+    "wall_seconds": 30.102
+  },
+  {
+    "acus_consumed": 2.0,
+    "error": null,
+    "polls": 2,
+    "pull_requests": [],
+    "schema_errors": [
+      "session produced no structured output"
+    ],
+    "schema_valid": false,
+    "session_id": "devin-mock-admin-ui",
+    "session_url": "https://app.devin.ai/sessions/admin-ui",
+    "status": "error",
+    "status_detail": "agent stopped without a final report",
+    "structured_output": null,
+    "task_id": "admin-ui",
+    "timed_out": false,
+    "wall_seconds": 30.068
+  }
+]
