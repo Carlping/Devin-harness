@@ -14,6 +14,52 @@ task manifest → N 個 session → 契約驗證過的回報 → 量測表 + 每
 
 它刻意做得很小。有價值的不是並行，而是**它拒絕計算哪些指標**。
 
+## 具體來說，誰需要這個
+
+- 你有 12 個 repository 都要做同一個 dependency bump，週一要告訴 manager：這群 agent 做不做
+  得完，還是需要 12 位工程師。
+- 你準備把 agent-driven migration 報給客戶，而你需要一個即使結果錯了也能辯護的數字。
+- 你已經讓 agents 跑完一批任務，某人問「這些到底有多少真的落地？」——但手上只有 agents
+  自己的 summaries。
+
+如果只跑一個 task，不需要這個：直接讀 session。這個工具存在於你不再逐一讀 session，而開始
+需要一個 denominator 的時候。
+
+## 你寫什麼，以及會得到什麼
+
+三個檔案，一個 command。沒有其他東西。
+
+| 你寫的 | 範例 | 它是什麼 |
+| --- | --- | --- |
+| task manifest | [`examples/tasks/repo-audit.yaml`](examples/tasks/repo-audit.yaml) | 每個工作單位一筆，包含 prompt 所需的 variables，以及證明它完成的 command。這份清單是每個 rate 的 denominator。 |
+| prompt template | [`examples/prompts/repo-audit.md`](examples/prompts/repo-audit.md) | 每個 session 收到的指示，依 task 填入 `{{variables}}`——包括邊界（「report `blocked` rather than guessing」）。 |
+| run spec | [`examples/live-smoke.yaml`](examples/live-smoke.yaml) | Blast radius：哪些 repos、同時跑幾個、每個 session 的 ACU ceiling、timeout，以及是否需要 PR。 |
+
+```bash
+python -m devin_fanout run --spec examples/live-smoke.yaml \
+  --transport live --api-version v1
+```
+
+回來的是每個 run 一張表——以下節錄自本 repository 裡那次真實的三個 task 的 run：
+
+| Metric | Value |
+| --- | --- |
+| Verified completion rate | 66.7% |
+| Unverified completion rate | 0.0% |
+| Human attention rate | 33.3% |
+| ACUs total | not exposed by this API version |
+
+| Task | Outcome | Verification | Needs a human because |
+| --- | --- | --- | --- |
+| `count-tests` | completed | `pytest -q` pass | — |
+| `metric-inventory` | completed | `ruff check .` pass | — |
+| `unavailable-credential` | blocked | — | outcome=blocked; agent asked for a human |
+
+讀法是：三個 task 中有兩個完成，而且自己的 checks 支持這個結論；一個需要你處理，而這個
+API version 無法告訴你 cost。第三個 task 刻意設計成無法從 repository 回答；它回報 named
+blockers，而不是一個看似合理的數字，這正是整個 harness 要找出的行為。完整報表：
+[`examples/run-output/live-smoke/REPORT.md`](examples/run-output/live-smoke/REPORT.md)。
+
 ## 讓這張表可信的三個決定
 
 1. **自述與外部證據永不合併。** session 的 structured output 只是「主張」；PR 是否存在、是否
