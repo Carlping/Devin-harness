@@ -1,6 +1,6 @@
 # Fan-out run `dependency-bump-demo`
 
-Generated 2026-08-26 15:55:46Z · transport `mock` · 6 tasks in the manifest.
+Generated 2026-08-26 16:22:18Z · transport `mock` · 6 tasks in the manifest.
 
 > **Transport: `mock`.** These numbers come from a scripted scenario file, not from
 > Devin sessions. They demonstrate that the pipeline and the metric definitions work.
@@ -23,7 +23,7 @@ Generated 2026-08-26 15:55:46Z · transport `mock` · 6 tasks in the manifest.
 | --- | --- |
 | ACUs total | 37.0 |
 | ACUs mean / p90 per task | 6.167 / 11.8 |
-| Wall-clock mean / p90 per task (s) | 30.091 / 30.103 |
+| Wall-clock mean / p90 per task (s) | 30.002 / 30.002 |
 | Mean polls per session | 2.0 |
 
 ## Counts

@@ -1,17 +1,20 @@
 {
+  "acus_available": true,
   "acus_mean": 6.167,
   "acus_p90": 11.8,
   "acus_total": 37.0,
   "create_failures": 0,
-  "generated_at": "2026-08-26 15:55:46Z",
+  "generated_at": "2026-08-26 16:22:18Z",
   "human_attention_rate": 0.8333,
   "needs_human": 5,
   "poll_failures": 0,
   "polls_mean": 2.0,
   "pr_merge_rate": 0.1667,
+  "pr_state_available": true,
   "prs_merged": 1,
   "prs_opened": 3,
   "reached_terminal": 6,
+  "require_pr": true,
   "run_id": "dependency-bump-demo",
   "schema_valid": 5,
   "schema_valid_rate": 0.8333,
@@ -34,6 +37,7 @@
       "polls": 2,
       "pr_state": "merged",
       "pr_url": "https://github.com/example-org/example-monorepo/pull/101",
+      "reached_terminal": true,
       "schema_valid": true,
       "self_reported_outcome": "completed",
       "session_id": "devin-mock-auth-service",
@@ -42,7 +46,7 @@
       "unverified_completion": false,
       "verification_command": "pytest services/auth -q",
       "verification_passed": true,
-      "wall_seconds": 30.102
+      "wall_seconds": 30.002
     },
     {
       "acus_consumed": 9.4,
@@ -52,6 +56,7 @@
       "polls": 2,
       "pr_state": "open",
       "pr_url": "https://github.com/example-org/example-monorepo/pull/102",
+      "reached_terminal": true,
       "schema_valid": true,
       "self_reported_outcome": "completed",
       "session_id": "devin-mock-billing-worker",
@@ -60,7 +65,7 @@
       "unverified_completion": false,
       "verification_command": "pytest workers/billing -q",
       "verification_passed": true,
-      "wall_seconds": 30.102
+      "wall_seconds": 30.002
     },
     {
       "acus_consumed": 3.1,
@@ -70,6 +75,7 @@
       "polls": 2,
       "pr_state": null,
       "pr_url": null,
+      "reached_terminal": true,
       "schema_valid": true,
       "self_reported_outcome": "blocked",
       "session_id": "devin-mock-legacy-reports",
@@ -78,7 +84,7 @@
       "unverified_completion": false,
       "verification_command": "",
       "verification_passed": false,
-      "wall_seconds": 30.103
+      "wall_seconds": 30.002
     },
     {
       "acus_consumed": 11.8,
@@ -88,6 +94,7 @@
       "polls": 2,
       "pr_state": "open",
       "pr_url": "https://github.com/example-org/example-monorepo/pull/103",
+      "reached_terminal": true,
       "schema_valid": true,
       "self_reported_outcome": "completed",
       "session_id": "devin-mock-notifications",
@@ -96,7 +103,7 @@
       "unverified_completion": true,
       "verification_command": "pytest services/notifications -q",
       "verification_passed": false,
-      "wall_seconds": 30.068
+      "wall_seconds": 30.002
     },
     {
       "acus_consumed": 4.5,
@@ -106,6 +113,7 @@
       "polls": 2,
       "pr_state": null,
       "pr_url": null,
+      "reached_terminal": true,
       "schema_valid": true,
       "self_reported_outcome": "completed",
       "session_id": "devin-mock-data-export",
@@ -114,7 +122,7 @@
       "unverified_completion": true,
       "verification_command": "pytest jobs/export -q",
       "verification_passed": true,
-      "wall_seconds": 30.102
+      "wall_seconds": 30.002
     },
     {
       "acus_consumed": 2.0,
@@ -124,6 +132,7 @@
       "polls": 2,
       "pr_state": null,
       "pr_url": null,
+      "reached_terminal": true,
       "schema_valid": false,
       "self_reported_outcome": null,
       "session_id": "devin-mock-admin-ui",
@@ -132,11 +141,11 @@
       "unverified_completion": false,
       "verification_command": "",
       "verification_passed": false,
-      "wall_seconds": 30.068
+      "wall_seconds": 30.002
     }
   ],
   "verification_passed": 3,
   "verified_completion_rate": 0.3333,
-  "wall_seconds_mean": 30.091,
-  "wall_seconds_p90": 30.103
+  "wall_seconds_mean": 30.002,
+  "wall_seconds_p90": 30.002
 }

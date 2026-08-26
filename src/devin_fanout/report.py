@@ -20,7 +20,24 @@ def _pct(value: float) -> str:
     return f"{value * 100:.1f}%"
 
 
+UNAVAILABLE = "not exposed by this API version"
+
+
+def _acu(value: float, available: bool) -> str:
+    """An unavailable measurement is printed as such, never as 0."""
+    return f"{value}" if available else UNAVAILABLE
+
+
 def render_markdown(metrics: RunMetrics) -> str:
+    if metrics.prs_opened == 0:
+        pr_merge_rate = "no PRs opened"
+        pr_counts = "0 / 0"
+    elif metrics.pr_state_available:
+        pr_merge_rate = _pct(metrics.pr_merge_rate)
+        pr_counts = f"{metrics.prs_opened} / {metrics.prs_merged}"
+    else:
+        pr_merge_rate = UNAVAILABLE
+        pr_counts = f"{metrics.prs_opened} / {UNAVAILABLE}"
     lines: list[str] = [
         f"# Fan-out run `{metrics.run_id}`",
         "",
@@ -37,15 +54,20 @@ def render_markdown(metrics: RunMetrics) -> str:
         "| Metric | Value | Definition |",
         "| --- | --- | --- |",
         f"| Verified completion rate | {_pct(metrics.verified_completion_rate)} | "
-        "`outcome=completed` **and** the session's own verification command passed "
-        "**and** a PR exists. Denominator is the task list. |",
+        "`outcome=completed` **and** the session's own verification command passed"
+        + (
+            " **and** a PR exists"
+            if metrics.require_pr
+            else " (this run set `require_pr: false`, so no PR was expected)"
+        )
+        + ". Denominator is the task list. |",
         f"| Unverified completion rate | {_pct(metrics.unverified_completion_rate)} | "
         "Said `completed` while its verification failed or no PR was opened. "
         "These are the ones a human must catch. |",
         f"| Human attention rate | {_pct(metrics.human_attention_rate)} | "
         "Tasks needing a person: blocked, partial, timed out, invalid report, API failure, "
         "or an explicit `human_action_required`. |",
-        f"| PR merge rate | {_pct(metrics.pr_merge_rate)} | "
+        f"| PR merge rate | {pr_merge_rate} | "
         "PRs in state `merged` at report time — external evidence, not self-report. "
         "Re-run `report` later to let this catch up with review. |",
         f"| Report-schema validity | {_pct(metrics.schema_valid_rate)} | "
@@ -55,8 +77,9 @@ def render_markdown(metrics: RunMetrics) -> str:
         "",
         "| Metric | Value |",
         "| --- | --- |",
-        f"| ACUs total | {metrics.acus_total} |",
-        f"| ACUs mean / p90 per task | {metrics.acus_mean} / {metrics.acus_p90} |",
+        f"| ACUs total | {_acu(metrics.acus_total, metrics.acus_available)} |",
+        f"| ACUs mean / p90 per task | {_acu(metrics.acus_mean, metrics.acus_available)}"
+        f" / {_acu(metrics.acus_p90, metrics.acus_available)} |",
         f"| Wall-clock mean / p90 per task (s) | {metrics.wall_seconds_mean} / "
         f"{metrics.wall_seconds_p90} |",
         f"| Mean polls per session | {metrics.polls_mean} |",
@@ -73,7 +96,7 @@ def render_markdown(metrics: RunMetrics) -> str:
         f"| Self-reported completed / partial / blocked / not attempted | "
         f"{metrics.self_reported_completed} / {metrics.self_reported_partial} / "
         f"{metrics.self_reported_blocked} / {metrics.self_reported_not_attempted} |",
-        f"| PRs opened / merged | {metrics.prs_opened} / {metrics.prs_merged} |",
+        f"| PRs opened / merged | {pr_counts} |",
         "",
         "## Per task",
         "",
@@ -103,6 +126,16 @@ def render_markdown(metrics: RunMetrics) -> str:
         "- `pr_merge_rate` is a snapshot. It is bounded by how fast a human reviews, not by "
         "the agent.",
         "- Tasks that fail to start count against every rate, on purpose.",
-        "",
     ]
+    if not metrics.acus_available:
+        lines.append(
+            "- This API version does not expose ACU consumption, so cost is reported as "
+            "unavailable rather than as zero."
+        )
+    if not metrics.pr_state_available:
+        lines.append(
+            "- Pull requests came back without a review state, so `pr_merge_rate` is reported as "
+            "unavailable: an unknown state is not the same as 'not merged'."
+        )
+    lines.append("")
     return "\n".join(lines)

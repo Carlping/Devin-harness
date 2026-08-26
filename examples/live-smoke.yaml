@@ -1,0 +1,17 @@
+# A live smoke run: three cheap read-only tasks against this repository.
+# Purpose is to exercise the real v3 API path end to end and produce a report
+# whose numbers are actually agent behaviour, not fixtures. `require_pr` is
+# false because these tasks are explicitly forbidden from opening PRs.
+run_id: live-smoke
+prompt_template: prompts/repo-audit.md
+tasks: tasks/repo-audit.yaml
+repos:
+  - github.com/Carlping/Devin-harness
+concurrency: 3
+poll_interval_seconds: 30
+timeout_minutes: 30
+devin_mode: fast
+max_acu_limit: 5
+require_pr: false
+tags:
+  - live-smoke

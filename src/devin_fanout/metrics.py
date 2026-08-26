@@ -62,6 +62,7 @@ class TaskVerdict:
     needs_human: bool
     needs_human_reason: str
     unverified_completion: bool
+    reached_terminal: bool
     acus_consumed: float
     wall_seconds: float
     polls: int
@@ -97,6 +98,9 @@ class RunMetrics:
     acus_total: float
     acus_mean: float
     acus_p90: float
+    acus_available: bool
+    pr_state_available: bool
+    require_pr: bool
     wall_seconds_mean: float
     wall_seconds_p90: float
     polls_mean: float
@@ -163,6 +167,7 @@ def _verdict(result: TaskResult, require_pr: bool) -> TaskVerdict:
         needs_human=bool(reasons),
         needs_human_reason="; ".join(reasons),
         unverified_completion=unverified,
+        reached_terminal=result.reached_terminal,
         acus_consumed=result.acus_consumed,
         wall_seconds=result.wall_seconds,
         polls=result.polls,
@@ -205,7 +210,7 @@ def summarize(
         create_failures=count(lambda v: v.status == "create_failed"),
         poll_failures=count(lambda v: v.status == "poll_failed"),
         timed_out=count(lambda v: v.status == "timed_out"),
-        reached_terminal=count(lambda v: v.status in {"exit", "error"}),
+        reached_terminal=count(lambda v: v.reached_terminal),
         schema_valid=count(lambda v: v.schema_valid),
         self_reported_completed=count(lambda v: v.self_reported_outcome == "completed"),
         self_reported_partial=count(lambda v: v.self_reported_outcome == "partial"),
@@ -224,6 +229,12 @@ def summarize(
         acus_total=round(sum(acus), 3),
         acus_mean=round(mean(acus), 3) if acus else 0.0,
         acus_p90=percentile(acus, 0.9),
+        acus_available=all(result.acus_available for result in results) if results else True,
+        # A PR whose review state the API never reported must not be counted as "not merged".
+        pr_state_available=not any(
+            verdict.pr_url and verdict.pr_state is None for verdict in verdicts
+        ),
+        require_pr=require_pr,
         wall_seconds_mean=round(mean(walls), 3) if walls else 0.0,
         wall_seconds_p90=percentile(walls, 0.9),
         polls_mean=round(mean(polls), 3) if polls else 0.0,

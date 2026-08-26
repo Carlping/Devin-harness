@@ -9,11 +9,11 @@ import pytest
 import yaml
 
 from devin_fanout.__main__ import main
-from devin_fanout.client import CreatedSession, MockTransport, SessionState
+from devin_fanout.client import CreatedSession, MockTransport, SessionState, V1Transport
 from devin_fanout.contract import DEFAULT_STRUCTURED_OUTPUT_SCHEMA
 from devin_fanout.metrics import percentile, summarize
 from devin_fanout.report import MOCK_BANNER, render_markdown
-from devin_fanout.runner import build_payload, run, validate_output
+from devin_fanout.runner import TaskResult, build_payload, run, validate_output
 from devin_fanout.spec import SpecError, load_spec, render_prompt
 
 ROOT = Path(__file__).parents[1]
@@ -176,6 +176,130 @@ def test_build_payload_includes_run_and_task_tags() -> None:
     assert payload["repos"] == ["github.com/example-org/example-monorepo"]
     assert payload["devin_mode"] == "fast"
     assert payload["max_acu_limit"] == 10
+
+
+class FakeResponse:
+    def __init__(self, payload: dict[str, Any], status_code: int = 200) -> None:
+        self.payload = payload
+        self.status_code = status_code
+        self.text = ""
+
+    def json(self) -> dict[str, Any]:
+        return self.payload
+
+
+class FakeSession:
+    def __init__(self, *responses: FakeResponse) -> None:
+        self.headers: dict[str, str] = {}
+        self.responses = list(responses)
+        self.calls: list[tuple[str, str, dict[str, Any]]] = []
+
+    def request(self, method: str, url: str, **kwargs: Any) -> FakeResponse:
+        self.calls.append((method, url, kwargs))
+        return self.responses.pop(0)
+
+
+def test_v1_create_strips_v3_fields_and_sets_idempotency() -> None:
+    session = FakeSession(FakeResponse({"session_id": "v1-session"}))
+    transport = V1Transport(api_key="test-key", session=session)
+    payload = {
+        "prompt": "audit the repository",
+        "title": "audit",
+        "tags": ["fanout-task:repo-audit"],
+        "repos": ["github.com/example/repo"],
+        "devin_mode": "fast",
+        "resumable": False,
+        "structured_output_required": True,
+    }
+
+    created = transport.create_session(payload)
+
+    assert created.session_id == "v1-session"
+    method, url, kwargs = session.calls[0]
+    assert method == "POST"
+    assert url.endswith("/v1/sessions")
+    body = json.loads(kwargs["data"])
+    assert body["prompt"] == "audit the repository"
+    assert body["idempotent"] is True
+    assert not {"repos", "devin_mode", "resumable", "structured_output_required"} & body.keys()
+
+
+@pytest.mark.parametrize(
+    ("status", "is_terminal"),
+    [("finished", True), ("blocked", True), ("expired", True), ("working", False)],
+)
+def test_v1_get_normalizes_terminal_status_and_missing_metrics(
+    status: str, is_terminal: bool
+) -> None:
+    session = FakeSession(
+        FakeResponse(
+            {
+                "session_id": "v1-session",
+                "status_enum": status,
+                "status": "working on the task",
+                "pull_request": {"url": "https://example.test/pull/7"},
+            }
+        )
+    )
+    transport = V1Transport(api_key="test-key", session=session)
+
+    state = transport.get_session("v1-session")
+
+    assert state.status == status
+    assert state.is_terminal is is_terminal
+    assert state.acus_available is False
+    assert state.acus_consumed == 0.0
+    assert state.pull_requests == ({"pr_url": "https://example.test/pull/7", "pr_state": None},)
+
+
+def test_v1_find_sessions_by_tag_returns_task_mapping() -> None:
+    session = FakeSession(
+        FakeResponse(
+            {
+                "sessions": [
+                    {
+                        "session_id": "v1-one",
+                        "tags": ["fanout-run:demo", "fanout-task:one"],
+                    },
+                    {
+                        "session_id": "v1-two",
+                        "tags": ["fanout-task:two"],
+                    },
+                    {"session_id": "ignored", "tags": ["other-tag"]},
+                ]
+            }
+        )
+    )
+    transport = V1Transport(api_key="test-key", session=session)
+
+    found = transport.find_sessions_by_tag("fanout-run:demo")
+
+    assert found == {"fanout-task:one": "v1-one", "fanout-task:two": "v1-two"}
+    method, url, kwargs = session.calls[0]
+    assert method == "GET"
+    assert url.endswith("/v1/sessions")
+    assert kwargs["params"] == {"tags": "fanout-run:demo", "limit": 200}
+
+
+def test_v1_report_marks_unavailable_metrics_instead_of_zero() -> None:
+    result = TaskResult(
+        task_id="v1-task",
+        session_id="v1-session",
+        status="finished",
+        reached_terminal=True,
+        acus_available=False,
+        pull_requests=({"pr_url": "https://example.test/pull/7", "pr_state": None},),
+    )
+    metrics = summarize([result], run_id="v1-run", transport="live-v1", generated_at="now")
+
+    report = render_markdown(metrics)
+
+    assert "not exposed by this API version" in report
+    assert "| ACUs total | 0" not in report
+    assert "| PR merge rate | not exposed by this API version |" in report
+    assert "| PRs opened / merged | 1 / not exposed by this API version |" in report
+    assert "does not expose ACU consumption" in report
+    assert "an unknown state is not the same as 'not merged'" in report
 
 
 def test_mock_run_metrics_and_journal(tmp_path: Path) -> None:

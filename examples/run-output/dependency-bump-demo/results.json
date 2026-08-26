@@ -1,5 +1,6 @@
 [
   {
+    "acus_available": true,
     "acus_consumed": 6.2,
     "error": null,
     "polls": 2,
@@ -9,6 +10,7 @@
         "pr_url": "https://github.com/example-org/example-monorepo/pull/101"
       }
     ],
+    "reached_terminal": true,
     "schema_errors": [],
     "schema_valid": true,
     "session_id": "devin-mock-auth-service",
@@ -28,9 +30,10 @@
     },
     "task_id": "auth-service",
     "timed_out": false,
-    "wall_seconds": 30.102
+    "wall_seconds": 30.002
   },
   {
+    "acus_available": true,
     "acus_consumed": 9.4,
     "error": null,
     "polls": 2,
@@ -40,6 +43,7 @@
         "pr_url": "https://github.com/example-org/example-monorepo/pull/102"
       }
     ],
+    "reached_terminal": true,
     "schema_errors": [],
     "schema_valid": true,
     "session_id": "devin-mock-billing-worker",
@@ -59,13 +63,15 @@
     },
     "task_id": "billing-worker",
     "timed_out": false,
-    "wall_seconds": 30.102
+    "wall_seconds": 30.002
   },
   {
+    "acus_available": true,
     "acus_consumed": 3.1,
     "error": null,
     "polls": 2,
     "pull_requests": [],
+    "reached_terminal": true,
     "schema_errors": [],
     "schema_valid": true,
     "session_id": "devin-mock-legacy-reports",
@@ -88,9 +94,10 @@
     },
     "task_id": "legacy-reports",
     "timed_out": false,
-    "wall_seconds": 30.103
+    "wall_seconds": 30.002
   },
   {
+    "acus_available": true,
     "acus_consumed": 11.8,
     "error": null,
     "polls": 2,
@@ -100,6 +107,7 @@
         "pr_url": "https://github.com/example-org/example-monorepo/pull/103"
       }
     ],
+    "reached_terminal": true,
     "schema_errors": [],
     "schema_valid": true,
     "session_id": "devin-mock-notifications",
@@ -120,13 +128,15 @@
     },
     "task_id": "notifications",
     "timed_out": false,
-    "wall_seconds": 30.068
+    "wall_seconds": 30.002
   },
   {
+    "acus_available": true,
     "acus_consumed": 4.5,
     "error": null,
     "polls": 2,
     "pull_requests": [],
+    "reached_terminal": true,
     "schema_errors": [],
     "schema_valid": true,
     "session_id": "devin-mock-data-export",
@@ -146,13 +156,15 @@
     },
     "task_id": "data-export",
     "timed_out": false,
-    "wall_seconds": 30.102
+    "wall_seconds": 30.002
   },
   {
+    "acus_available": true,
     "acus_consumed": 2.0,
     "error": null,
     "polls": 2,
     "pull_requests": [],
+    "reached_terminal": true,
     "schema_errors": [
       "session produced no structured output"
     ],
@@ -164,6 +176,6 @@
     "structured_output": null,
     "task_id": "admin-ui",
     "timed_out": false,
-    "wall_seconds": 30.068
+    "wall_seconds": 30.002
   }
 ]

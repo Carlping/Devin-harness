@@ -22,7 +22,7 @@ from pathlib import Path
 
 import yaml
 
-from .client import HttpTransport, MockTransport
+from .client import HttpTransport, MockTransport, V1Transport
 from .contract import DEFAULT_STRUCTURED_OUTPUT_SCHEMA
 from .metrics import summarize
 from .report import render_markdown
@@ -81,15 +81,18 @@ def cmd_run(args: argparse.Namespace) -> int:
     run_dir.mkdir(parents=True, exist_ok=True)
 
     if args.transport == "live":
-        org_id = spec.org_id or os.environ.get("DEVIN_ORG_ID", "")
         api_key = os.environ.get("DEVIN_API_KEY", "")
-        if not org_id:
-            raise SpecError(
-                "live transport needs org_id in the spec or DEVIN_ORG_ID in the environment"
-            )
         if not api_key:
             raise SpecError("live transport needs DEVIN_API_KEY in the environment")
-        transport = HttpTransport(org_id=org_id, api_key=api_key)
+        if args.api_version == "v1":
+            transport = V1Transport(api_key=api_key)
+        else:
+            org_id = spec.org_id or os.environ.get("DEVIN_ORG_ID", "")
+            if not org_id:
+                raise SpecError(
+                    "the v3 API is organisation-scoped: set org_id in the spec or DEVIN_ORG_ID"
+                )
+            transport = HttpTransport(org_id=org_id, api_key=api_key)
     else:
         if not args.scenarios:
             raise SpecError("mock transport needs --scenarios")
@@ -100,8 +103,9 @@ def cmd_run(args: argparse.Namespace) -> int:
         )
 
     results = run(spec, transport, run_dir, resume=not args.no_resume)
+    label = "mock" if args.transport == "mock" else f"live-{transport.api_version}"
     report_path = _write_outputs(
-        run_dir, results, run_id=spec.run_id, transport=args.transport, require_pr=spec.require_pr
+        run_dir, results, run_id=spec.run_id, transport=label, require_pr=spec.require_pr
     )
     print(f"wrote {report_path}")
     return 0
@@ -148,6 +152,13 @@ def build_parser() -> argparse.ArgumentParser:
     runner = subparsers.add_parser("run", help="fan the task list out and write a report")
     runner.add_argument("--spec", required=True)
     runner.add_argument("--transport", choices=["mock", "live"], default="mock")
+    runner.add_argument(
+        "--api-version",
+        choices=["v3", "v1"],
+        default="v3",
+        help="v3 is organisation-scoped and reports ACUs and PR state; v1 is the fallback for "
+        "keys without org scope and exposes neither",
+    )
     runner.add_argument("--scenarios", help="scenario file for the mock transport")
     runner.add_argument("--out", default="runs")
     runner.add_argument(

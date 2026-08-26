@@ -43,6 +43,8 @@ class TaskResult:
     schema_errors: tuple[str, ...] = ()
     pull_requests: tuple[dict[str, Any], ...] = ()
     timed_out: bool = False
+    reached_terminal: bool = False
+    acus_available: bool = True
     error: str | None = None
 
     @property
@@ -151,6 +153,7 @@ def _run_task(
         result.status = state.status
         result.status_detail = state.status_detail
         result.acus_consumed = state.acus_consumed
+        result.acus_available = state.acus_available
         result.pull_requests = state.pull_requests
         journal.append(
             "polled",
@@ -162,6 +165,7 @@ def _run_task(
         )
 
         if state.is_terminal:
+            result.reached_terminal = True
             result.structured_output = state.structured_output
             result.schema_errors = validate_output(schema, state.structured_output)
             break

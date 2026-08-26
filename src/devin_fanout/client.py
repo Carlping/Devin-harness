@@ -1,6 +1,6 @@
-"""Devin API v3 client, plus a mock transport used by the tests and CI.
+"""Devin API clients (v3 and v1), plus a mock transport used by the tests and CI.
 
-Endpoints (docs.devin.ai/api-reference/v3):
+v3 (docs.devin.ai/api-reference/v3):
 
     POST /v3/organizations/{org_id}/sessions        -> {session_id, url, ...}
     GET  /v3/organizations/{org_id}/sessions/{id}   -> {status, status_detail,
@@ -8,9 +8,19 @@ Endpoints (docs.devin.ai/api-reference/v3):
                                                         pull_requests[{pr_url, pr_state}],
                                                         structured_output, ...}
 
-v3 has no idempotency key, so duplicate-suppression lives in the journal and in
-the per-run tag: a crashed run can find sessions it already created by tag
-instead of creating a second one.
+v1 (docs.devin.ai/api-reference/v1) is the fallback for keys without
+organisation scope. It is a strictly poorer measurement surface and the harness
+says so rather than filling the gaps with zeros that look like data:
+
+    POST /v1/sessions            -> supports `idempotent`, but no `repos` and no
+                                    `devin_mode`; the repository has to be named
+                                    in the prompt.
+    GET  /v1/sessions/{id}       -> no `acus_consumed`, and `pull_request` carries
+                                    a URL with no review state.
+
+Neither version has an idempotency key on v3, so duplicate suppression lives in
+the journal and in the per-run tag: a crashed run finds the sessions it already
+created by tag instead of creating a second one.
 """
 
 from __future__ import annotations
@@ -48,13 +58,13 @@ class SessionState:
     structured_output: dict[str, Any] | None
     pull_requests: tuple[dict[str, Any], ...]
     url: str = ""
-
-    @property
-    def is_terminal(self) -> bool:
-        return self.status in TERMINAL_STATUSES
+    is_terminal: bool = False
+    acus_available: bool = True
 
 
 class Transport(Protocol):
+    api_version: str
+
     def create_session(self, payload: dict[str, Any]) -> CreatedSession: ...
 
     def get_session(self, session_id: str) -> SessionState: ...
@@ -63,19 +73,23 @@ class Transport(Protocol):
 
 
 def _state_from_payload(payload: dict[str, Any]) -> SessionState:
+    status = str(payload.get("status", "unknown"))
     return SessionState(
         session_id=str(payload["session_id"]),
-        status=str(payload.get("status", "unknown")),
+        status=status,
         status_detail=payload.get("status_detail"),
         acus_consumed=float(payload.get("acus_consumed") or 0.0),
         structured_output=payload.get("structured_output"),
         pull_requests=tuple(payload.get("pull_requests") or ()),
         url=str(payload.get("url", "")),
+        is_terminal=status in TERMINAL_STATUSES,
     )
 
 
 class HttpTransport:
-    """Real API access. Retries only on 429 and 5xx, with linear backoff."""
+    """Real v3 API access. Retries only on 429 and 5xx, with linear backoff."""
+
+    api_version = "v3"
 
     def __init__(self, org_id: str, api_key: str, session: requests.Session | None = None) -> None:
         if not org_id.startswith("org-"):
@@ -129,6 +143,63 @@ class HttpTransport:
         return found
 
 
+V1_TERMINAL_STATUSES = {"finished", "blocked", "expired"}
+V1_UNSUPPORTED_PAYLOAD_KEYS = {"repos", "devin_mode", "resumable", "structured_output_required"}
+
+
+class V1Transport(HttpTransport):
+    """Fallback for API keys that cannot reach the organisation-scoped v3 routes.
+
+    Two measurement consequences, both surfaced in the report rather than papered
+    over: ACU consumption is not exposed, and a pull request comes back as a bare
+    URL with no review state.
+    """
+
+    api_version = "v1"
+
+    def __init__(self, api_key: str, session: requests.Session | None = None) -> None:
+        # Bypass the v3 org-id requirement; v1 routes are not org-scoped.
+        super().__init__(org_id="org-unused", api_key=api_key, session=session)
+
+    def create_session(self, payload: dict[str, Any]) -> CreatedSession:
+        body = {
+            key: value for key, value in payload.items() if key not in V1_UNSUPPORTED_PAYLOAD_KEYS
+        }
+        body["idempotent"] = True
+        response = self._request("POST", "/v1/sessions", data=json.dumps(body))
+        return CreatedSession(
+            session_id=str(response["session_id"]), url=str(response.get("url", ""))
+        )
+
+    def get_session(self, session_id: str) -> SessionState:
+        body = self._request("GET", f"/v1/sessions/{session_id}")
+        status = str(body.get("status_enum") or body.get("status") or "unknown")
+        pull_request = body.get("pull_request") or {}
+        pull_requests: tuple[dict[str, Any], ...] = ()
+        if pull_request.get("url"):
+            pull_requests = ({"pr_url": pull_request["url"], "pr_state": None},)
+        return SessionState(
+            session_id=session_id,
+            status=status,
+            status_detail=str(body.get("status") or "") or None,
+            acus_consumed=0.0,
+            structured_output=body.get("structured_output"),
+            pull_requests=pull_requests,
+            url=str(body.get("url", "")),
+            is_terminal=status in V1_TERMINAL_STATUSES,
+            acus_available=False,
+        )
+
+    def find_sessions_by_tag(self, tag: str) -> dict[str, str]:
+        body = self._request("GET", "/v1/sessions", params={"tags": tag, "limit": 200})
+        found: dict[str, str] = {}
+        for item in body.get("sessions") or []:
+            for item_tag in item.get("tags") or []:
+                if item_tag.startswith("fanout-task:"):
+                    found[item_tag] = str(item["session_id"])
+        return found
+
+
 @dataclass
 class MockTransport:
     """Deterministic transport driven by a scripted scenario.
@@ -139,7 +210,8 @@ class MockTransport:
     waiting on wall-clock time.
     """
 
-    scenarios: dict[str, dict[str, Any]]
+    api_version: str = "mock"
+    scenarios: dict[str, dict[str, Any]] = field(default_factory=dict)
     polls_before_terminal: int = 1
     created: list[dict[str, Any]] = field(default_factory=list)
     _polls: dict[str, int] = field(default_factory=dict)
@@ -168,6 +240,7 @@ class MockTransport:
                 acus_consumed=float(count),
                 structured_output=None,
                 pull_requests=(),
+                is_terminal=False,
             )
         scenario = self.scenarios.get(task_id)
         if scenario is None:
