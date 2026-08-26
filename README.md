@@ -18,6 +18,55 @@ task manifest → N sessions → contract-validated reports → metrics + per-ta
 It is deliberately small. The interesting part is not the concurrency; it is **which
 metrics it refuses to compute**.
 
+## Who needs this, concretely
+
+- You have 12 repositories that all need the same dependency bump, and you have to tell
+  your manager on Monday whether the fleet can do it or whether it needs 12 engineers.
+- You are about to quote an agent-driven migration to a customer and you need a number
+  you can defend when it is wrong.
+- You already ran agents on a batch and someone asked *"how many of those actually
+  landed?"* — and the only answer available was the agents' own summaries.
+
+If you are running one task, you do not need this: read the session. This exists for the
+point where you stop reading sessions and start needing a denominator.
+
+## What you write, and what comes back
+
+Three files, one command. Nothing else.
+
+| You write | Example | What it is |
+| --- | --- | --- |
+| A task manifest | [`examples/tasks/repo-audit.yaml`](examples/tasks/repo-audit.yaml) | One entry per unit of work, each with the variables its prompt needs and the command that proves it worked. This list is the denominator of every rate. |
+| A prompt template | [`examples/prompts/repo-audit.md`](examples/prompts/repo-audit.md) | The instructions every session gets, with `{{variables}}` filled in per task — including the boundaries ("report `blocked` rather than guessing"). |
+| A run spec | [`examples/live-smoke.yaml`](examples/live-smoke.yaml) | Blast radius: which repos, how many at once, ACU ceiling per session, timeout, whether a PR is required. |
+
+```bash
+python -m devin_fanout run --spec examples/live-smoke.yaml \
+  --transport live --api-version v1
+```
+
+What comes back is one table per run — this is the real three-task run committed in this
+repository, abridged:
+
+| Metric | Value |
+| --- | --- |
+| Verified completion rate | 66.7% |
+| Unverified completion rate | 0.0% |
+| Human attention rate | 33.3% |
+| ACUs total | not exposed by this API version |
+
+| Task | Outcome | Verification | Needs a human because |
+| --- | --- | --- | --- |
+| `count-tests` | completed | `pytest -q` pass | — |
+| `metric-inventory` | completed | `ruff check .` pass | — |
+| `unavailable-credential` | blocked | — | outcome=blocked; agent asked for a human |
+
+Read it as: two of three tasks are done and their own checks back that up, one needs you,
+and this API version cannot tell you the cost. The third task was designed to be
+unanswerable from the repository; it returned named blockers instead of a plausible
+number, which is the behaviour the whole harness exists to detect. Full report:
+[`examples/run-output/live-smoke/REPORT.md`](examples/run-output/live-smoke/REPORT.md).
+
 ## The three decisions that make the table trustworthy
 
 **1. Self-report and external evidence are never merged.** A session's structured output
