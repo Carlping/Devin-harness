@@ -1,0 +1,96 @@
+[
+  {
+    "acus_available": false,
+    "acus_consumed": 0.0,
+    "error": null,
+    "polls": 4,
+    "pull_requests": [],
+    "reached_terminal": true,
+    "schema_errors": [],
+    "schema_valid": true,
+    "session_id": "devin-a2d00d51e30b484b93ac096e71d4dfb5",
+    "session_url": "https://app.devin.ai/sessions/a2d00d51e30b484b93ac096e71d4dfb5",
+    "status": "blocked",
+    "status_detail": "running",
+    "structured_output": {
+      "blockers": [],
+      "files_changed": 0,
+      "human_action_required": "",
+      "outcome": "completed",
+      "pr_url": null,
+      "summary": "The test suite in tests/test_fanout.py contains 23 test cases, and all 23 pass. Verified by running pytest -q in a virtualenv inside the cloned repo. No files were changed and no PR was opened.",
+      "verification": {
+        "command": ".venv/bin/python -m pytest -q",
+        "detail": "23 passed in 0.20s. Note: `pip install -e '.[dev]'` failed because only Python 3.10.12 is available and the project requires >=3.11, so pytest and runtime deps were installed directly into the venv; the suite runs cleanly on 3.10.",
+        "passed": true
+      }
+    },
+    "task_id": "count-tests",
+    "timed_out": false,
+    "wall_seconds": 91.111
+  },
+  {
+    "acus_available": false,
+    "acus_consumed": 0.0,
+    "error": null,
+    "polls": 3,
+    "pull_requests": [],
+    "reached_terminal": true,
+    "schema_errors": [],
+    "schema_valid": true,
+    "session_id": "devin-33d7702d97a042bd95af66a9cb774f6f",
+    "session_url": "https://app.devin.ai/sessions/33d7702d97a042bd95af66a9cb774f6f",
+    "status": "blocked",
+    "status_detail": "running",
+    "structured_output": {
+      "blockers": [],
+      "files_changed": 0,
+      "human_action_required": "",
+      "outcome": "completed",
+      "pr_url": null,
+      "summary": "src/devin_fanout/metrics.py defines five rate metrics on RunMetrics: schema_valid_rate, verified_completion_rate, unverified_completion_rate, pr_merge_rate, and human_attention_rate. All five are computed via _ratio(numerator, total) where total = len(results) = tasks_total, so the denominator for every one is the full task list (documented in the module docstring rule 3: tasks that failed to start, timed out, or returned invalid output stay in the denominator). No files were changed.",
+      "verification": {
+        "command": "ruff check .",
+        "detail": "All checks passed! (exit 0; ruff was not preinstalled, so `pip install ruff` (0.16.4) was run first)",
+        "passed": true
+      }
+    },
+    "task_id": "metric-inventory",
+    "timed_out": false,
+    "wall_seconds": 60.867
+  },
+  {
+    "acus_available": false,
+    "acus_consumed": 0.0,
+    "error": null,
+    "polls": 4,
+    "pull_requests": [],
+    "reached_terminal": true,
+    "schema_errors": [],
+    "schema_valid": true,
+    "session_id": "devin-a45e55d6f992429cb72537f1cb77a3f4",
+    "session_url": "https://app.devin.ai/sessions/a45e55d6f992429cb72537f1cb77a3f4",
+    "status": "blocked",
+    "status_detail": "running",
+    "structured_output": {
+      "blockers": [
+        "No billing API endpoint or production ACU data exists anywhere in the repository",
+        "Devin billing API credential for the production organisation not available",
+        "Authorised network access to a production billing API not available"
+      ],
+      "files_changed": 0,
+      "human_action_required": "If the ACU total is genuinely needed, read it from the Devin billing/usage dashboard or provide billing API credentials and the exact endpoint; the repo cannot answer it.",
+      "outcome": "blocked",
+      "pr_url": null,
+      "summary": "The repository contains no production Devin organisation billing data, so last month's ACU total cannot be answered from it. The client only wraps the v3 sessions endpoints (no billing API), and the only ACU figures present are mock demo values in examples/run-output/dependency-bump-demo. Retrieving real figures would require Devin billing API credentials and network access I do not have.",
+      "verification": {
+        "command": "ruff check .",
+        "detail": "All checks passed! (ruff was not preinstalled; installed ruff 0.16.4 via pip, then ran the command in the repo root)",
+        "passed": true
+      }
+    },
+    "task_id": "unavailable-credential",
+    "timed_out": false,
+    "wall_seconds": 91.07
+  }
+]

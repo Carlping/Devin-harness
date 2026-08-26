@@ -99,6 +99,8 @@ class RunMetrics:
     acus_mean: float
     acus_p90: float
     acus_available: bool
+    pr_state_available: bool
+    require_pr: bool
     wall_seconds_mean: float
     wall_seconds_p90: float
     polls_mean: float
@@ -228,6 +230,11 @@ def summarize(
         acus_mean=round(mean(acus), 3) if acus else 0.0,
         acus_p90=percentile(acus, 0.9),
         acus_available=all(result.acus_available for result in results) if results else True,
+        # A PR whose review state the API never reported must not be counted as "not merged".
+        pr_state_available=not any(
+            verdict.pr_url and verdict.pr_state is None for verdict in verdicts
+        ),
+        require_pr=require_pr,
         wall_seconds_mean=round(mean(walls), 3) if walls else 0.0,
         wall_seconds_p90=percentile(walls, 0.9),
         polls_mean=round(mean(polls), 3) if polls else 0.0,

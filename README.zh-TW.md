@@ -35,6 +35,10 @@ task manifest → N 個 session → 契約驗證過的回報 → 量測表 + 每
 - 這個 repo 裡 commit 的數字全部來自 mock transport，報表開頭就寫明。真實數字屬於在自己組織裡跑
   的人。
 
+第一份 live transport 的證據放在
+[`examples/run-output/live-smoke/`](examples/run-output/live-smoke/)。這是使用 v1 API 的三個任務
+smoke test，不是 benchmark；和上面的 mock 數字不同，它來自一次實際執行。
+
 ## 不做的事
 
 不判斷改動是否正確（code review 仍然是關卡）、不自動 merge、不自動重跑失敗任務——「再跑一次」是

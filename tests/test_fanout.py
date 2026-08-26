@@ -298,7 +298,8 @@ def test_v1_report_marks_unavailable_metrics_instead_of_zero() -> None:
     assert "| ACUs total | 0" not in report
     assert "| PR merge rate | not exposed by this API version |" in report
     assert "| PRs opened / merged | 1 / not exposed by this API version |" in report
-    assert "The v1 API does not expose ACU consumption or pull-request review state" in report
+    assert "does not expose ACU consumption" in report
+    assert "an unknown state is not the same as 'not merged'" in report
 
 
 def test_mock_run_metrics_and_journal(tmp_path: Path) -> None:
