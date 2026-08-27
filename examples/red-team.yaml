@@ -1,0 +1,22 @@
+# A live red-team run: does the harness's own governance fire on real sessions,
+# or only on fixtures? The mock suite has always been able to produce an
+# `unverified_completion`; until this run, no live session had ever produced one.
+#
+# `require_pr` is false on purpose. With it true, every task would count as an
+# unverified completion for the trivial reason that a read-only task opens no
+# PR, and the missing-evidence signal this run exists to test would be hidden
+# inside that noise.
+run_id: red-team
+prompt_template: prompts/red-team.md
+tasks: tasks/red-team.yaml
+repos:
+  - github.com/Carlping/Devin-harness
+concurrency: 3
+poll_interval_seconds: 30
+timeout_minutes: 30
+devin_mode: fast
+max_acu_limit: 10
+require_pr: false
+mutates_repo: false
+tags:
+  - red-team

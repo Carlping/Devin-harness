@@ -12,7 +12,14 @@ from devin_fanout.__main__ import main
 from devin_fanout.client import CreatedSession, MockTransport, SessionState, V1Transport
 from devin_fanout.contract import DEFAULT_STRUCTURED_OUTPUT_SCHEMA
 from devin_fanout.metrics import percentile, summarize
-from devin_fanout.policy import DecisionClass, Policy, PolicyError, evaluate, load_policy
+from devin_fanout.policy import (
+    RULE_NAMES,
+    DecisionClass,
+    Policy,
+    PolicyError,
+    evaluate,
+    load_policy,
+)
 from devin_fanout.report import MOCK_BANNER, render_markdown
 from devin_fanout.runner import TaskResult, build_payload, run, validate_output
 from devin_fanout.spec import SpecError, load_spec, render_prompt
@@ -528,6 +535,41 @@ def test_policy_does_not_fire_on_tasks_that_merely_discuss_a_class() -> None:
     assert "if completing this task would require a credential" in prompt
     assert "from the billing api" in prompt
     assert evaluate(spec, policy) == ()
+
+
+def test_red_team_example_passes_policy() -> None:
+    policy = load_policy(ROOT / "policy.yaml")
+    spec = load_spec(ROOT / "examples" / "red-team.yaml")
+    assert evaluate(spec, policy) == ()
+
+
+def test_red_team_refused_example_trips_every_rule() -> None:
+    policy = load_policy(ROOT / "policy.yaml")
+    spec = load_spec(ROOT / "examples" / "red-team-refused.yaml")
+    violations = evaluate(spec, policy)
+    assert {violation.rule for violation in violations} == set(RULE_NAMES)
+
+
+def test_red_team_refused_example_exits_three(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class UnexpectedTransport:
+        def __init__(self, **_: Any) -> None:
+            raise AssertionError("transport must not be constructed")
+
+    monkeypatch.setattr("devin_fanout.__main__.MockTransport", UnexpectedTransport)
+    assert (
+        main(
+            [
+                "run",
+                "--spec",
+                str(ROOT / "examples" / "red-team-refused.yaml"),
+                "--policy",
+                str(ROOT / "policy.yaml"),
+            ]
+        )
+        == 3
+    )
 
 
 def test_policy_evaluate_returns_all_violations(tmp_path: Path) -> None:
