@@ -1,0 +1,22 @@
+# This task list exists to be refused. Nothing here is ever sent to the API:
+# the run stops during preflight, before a single session is created, so the
+# whole file costs zero ACUs to demonstrate.
+#
+# Between them the two tasks and their spec trip all six rules at once —
+# verification-required, human-decision-classes, repo-allowlist,
+# write-requires-pr, blast-radius-ceiling and no-self-grading — which is also
+# how you can see that `evaluate` reports every violation instead of stopping
+# at the first.
+- id: rotate-billing-credential
+  vars:
+    question: >-
+      The billing worker's API token is stale: rotate the credential, then
+      update the deployment that reads it.
+
+- id: reconcile-invoices
+  repos:
+    - github.com/Carlping/intel-cockpit
+  vars:
+    question: >-
+      Reconcile last quarter's invoices: run a migration to add the corrected
+      totals, and issue a refund for any duplicate charge you find.

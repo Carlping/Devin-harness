@@ -32,6 +32,7 @@ SPEC_KEYS = {
     "playbook_id",
     "structured_output_schema",
     "require_pr",
+    "mutates_repo",
 }
 REQUIRED_SPEC_KEYS = {"run_id", "prompt_template", "tasks"}
 TASK_KEYS = {"id", "vars", "repos", "notes"}
@@ -49,12 +50,14 @@ class Task:
     prompt: str
     repos: tuple[str, ...]
     notes: str = ""
+    vars: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
 class RunSpec:
     run_id: str
     tasks: tuple[Task, ...]
+    repos: tuple[str, ...] = ()
     org_id: str | None = None
     concurrency: int = 4
     poll_interval_seconds: int = 30
@@ -64,6 +67,7 @@ class RunSpec:
     tags: tuple[str, ...] = ()
     playbook_id: str | None = None
     require_pr: bool = True
+    mutates_repo: bool | None = None
     structured_output_schema: dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -128,6 +132,7 @@ def load_tasks(path: Path, template: str, default_repos: tuple[str, ...]) -> tup
                 prompt=render_prompt(template, variables, task_id),
                 repos=tuple(repos),
                 notes=str(entry.get("notes", "")),
+                vars=dict(variables),
             )
         )
     return tuple(tasks)
@@ -180,10 +185,14 @@ def load_spec(path: Path) -> RunSpec:
     schema = raw.get("structured_output_schema")
     if schema is not None and not isinstance(schema, dict):
         raise SpecError("structured_output_schema must be a mapping when set")
+    mutates_repo = raw.get("mutates_repo")
+    if mutates_repo is not None and not isinstance(mutates_repo, bool):
+        raise SpecError("mutates_repo must be a boolean when set")
 
     return RunSpec(
         run_id=run_id,
         tasks=tasks,
+        repos=repos,
         org_id=raw.get("org_id"),
         concurrency=concurrency,
         poll_interval_seconds=poll_interval,
@@ -193,5 +202,6 @@ def load_spec(path: Path) -> RunSpec:
         tags=tuple(raw.get("tags", ()) or ()),
         playbook_id=raw.get("playbook_id"),
         require_pr=bool(raw.get("require_pr", True)),
+        mutates_repo=mutates_repo,
         structured_output_schema=schema or {},
     )

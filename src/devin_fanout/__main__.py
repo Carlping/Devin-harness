@@ -25,9 +25,10 @@ import yaml
 from .client import HttpTransport, MockTransport, V1Transport
 from .contract import DEFAULT_STRUCTURED_OUTPUT_SCHEMA
 from .metrics import summarize
+from .policy import Policy, PolicyError, evaluate, load_policy
 from .report import render_markdown
 from .runner import TaskResult, build_payload, run
-from .spec import SpecError, load_spec
+from .spec import RunSpec, SpecError, load_spec
 
 
 def _now() -> str:
@@ -39,6 +40,23 @@ def _load_scenarios(path: Path) -> dict:
     if not isinstance(data, dict) or "scenarios" not in data:
         raise SpecError(f"{path} must be a mapping with a 'scenarios' key")
     return data
+
+
+class PolicyViolation(Exception):
+    """Internal signal for the CLI's distinct policy exit code."""
+
+
+def _enforce_policy(spec: RunSpec, path: Path) -> Policy:
+    policy = load_policy(path)
+    violations = evaluate(spec, policy)
+    for violation in violations:
+        print(
+            f"POLICY {violation.rule} [{violation.task_id or ''}]: {violation.message}",
+            file=sys.stderr,
+        )
+    if violations:
+        raise PolicyViolation
+    return policy
 
 
 def _write_outputs(
@@ -65,10 +83,13 @@ def _write_outputs(
 
 def cmd_validate(args: argparse.Namespace) -> int:
     spec = load_spec(Path(args.spec))
+    policy_path = Path(args.policy)
+    policy = _enforce_policy(spec, policy_path)
     print(f"run_id: {spec.run_id}")
     print(f"tasks: {len(spec.tasks)}")
     print(f"concurrency: {spec.concurrency}  timeout: {spec.timeout_minutes}m")
     print(f"schema: {'custom' if spec.structured_output_schema else 'default contract'}")
+    print(f"policy: {policy_path} ({policy.rules_evaluated} rules evaluated)")
     if args.show_payloads:
         payloads = [build_payload(spec, task) for task in spec.tasks]
         print(json.dumps(payloads, indent=2, sort_keys=True))
@@ -77,6 +98,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
 def cmd_run(args: argparse.Namespace) -> int:
     spec = load_spec(Path(args.spec))
+    _enforce_policy(spec, Path(args.policy))
     run_dir = Path(args.out) / spec.run_id
     run_dir.mkdir(parents=True, exist_ok=True)
 
@@ -146,11 +168,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     validate = subparsers.add_parser("validate", help="load a spec and refuse anything ambiguous")
     validate.add_argument("--spec", required=True)
+    validate.add_argument("--policy", default="policy.yaml")
     validate.add_argument("--show-payloads", action="store_true")
     validate.set_defaults(func=cmd_validate)
 
     runner = subparsers.add_parser("run", help="fan the task list out and write a report")
     runner.add_argument("--spec", required=True)
+    runner.add_argument("--policy", default="policy.yaml")
     runner.add_argument("--transport", choices=["mock", "live"], default="mock")
     runner.add_argument(
         "--api-version",
@@ -182,7 +206,9 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         return int(args.func(args))
-    except SpecError as exc:
+    except PolicyViolation:
+        return 3
+    except (SpecError, PolicyError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 

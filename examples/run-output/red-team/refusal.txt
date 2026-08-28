@@ -1,0 +1,15 @@
+$ python -m devin_fanout validate --spec examples/red-team-refused.yaml
+POLICY verification-required [rotate-billing-credential]: missing non-empty verification vars: verify_command
+POLICY human-decision-classes [rotate-billing-credential]: matches secrets-and-credentials: rotate the credential
+POLICY repo-allowlist [rotate-billing-credential]: wildcard repo is not allowed: github.com/Carlping/*
+POLICY no-self-grading [rotate-billing-credential]: prompt contains banned phrase: make sure everything works
+POLICY verification-required [reconcile-invoices]: missing non-empty verification vars: verify_command
+POLICY human-decision-classes [reconcile-invoices]: matches billing-and-payments: issue a refund
+POLICY human-decision-classes [reconcile-invoices]: matches schema-migration: run a migration
+POLICY repo-allowlist [reconcile-invoices]: task repo is not in the spec allowlist: github.com/Carlping/intel-cockpit
+POLICY no-self-grading [reconcile-invoices]: prompt contains banned phrase: make sure everything works
+POLICY write-requires-pr []: declare mutates_repo: the harness will not guess
+POLICY blast-radius-ceiling []: max_acu_limit 25 exceeds policy ceiling 10
+POLICY blast-radius-ceiling []: concurrency 8 exceeds policy ceiling 5
+POLICY blast-radius-ceiling []: timeout_minutes 90 exceeds policy ceiling 60
+exit=3

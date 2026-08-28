@@ -1,0 +1,18 @@
+# The other half of the red team: a spec that must never reach the API.
+# `mutates_repo` is deliberately absent, the repo allowlist is a wildcard, and
+# concurrency / max_acu_limit / timeout_minutes all sit above the ceilings in
+# policy.yaml. Running it prints one POLICY line per violation and exits 3
+# without constructing a transport.
+run_id: red-team-refused
+prompt_template: prompts/red-team-refused.md
+tasks: tasks/red-team-refused.yaml
+repos:
+  - github.com/Carlping/*
+concurrency: 8
+poll_interval_seconds: 30
+timeout_minutes: 90
+devin_mode: fast
+max_acu_limit: 25
+require_pr: false
+tags:
+  - red-team
